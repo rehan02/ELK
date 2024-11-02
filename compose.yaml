@@ -1,0 +1,59 @@
+services:
+  # Elasticsearch service
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.5.0
+    container_name: elasticsearch
+    environment:
+      - node.name=elasticsearch
+      - discovery.type=single-node
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"  # JVM memory settings
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - MyDFIR-SOC-Challenge
+
+  # Logstash service
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.5.0
+    container_name: logstash
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline
+    environment:
+      - LS_JAVA_OPTS=-Xmx256m -Xms256m
+    ports:
+      - "5044:5044"  # Beats input
+      - "5000:5000"  # Logstash TCP input
+      - "9600:9600"  # Monitoring API
+    networks:
+      - MyDFIR-SOC-Challenge
+    depends_on:
+      - elasticsearch
+
+  # Kibana service
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.5.0
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    networks:
+      - MyDFIR-SOC-Challenge
+    depends_on:
+      - elasticsearch
+
+volumes:
+  es_data:
+
+networks:
+  MyDFIR-SOC-Challenge:
+    driver: bridge
